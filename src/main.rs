@@ -1,6 +1,5 @@
-use chrono::{Local, NaiveDate};
+use chrono::{Datelike, Local, NaiveDate};
 use clap::{Arg, Command};
-use csv::{ReaderBuilder, WriterBuilder};
 use serde::{Deserialize, Serialize};
 use serde_json::Result;
 use std::{
@@ -42,8 +41,36 @@ impl ExpenseTracker {
         self.expenses.remove(row_number - 1);
     }
 
-    fn total_expenses(&self) -> f64 {
-        self.expenses.iter().map(|e| e.amount).sum()
+    fn total_expenses(&self, filter_by: &str) -> f64 {
+        let mut sum = 0 as f64;
+
+        if filter_by == "all" {
+            return self.expenses.iter().map(|e| e.amount).sum();
+        }
+        for expense in self.expenses.iter() {
+            if expense.category == *filter_by {
+                sum = sum + expense.amount;
+            }
+        }
+        sum
+    }
+    fn summary_by_date(&self, date: NaiveDate) -> f64 {
+        let mut sum = 0 as f64;
+        for expense in self.expenses.iter() {
+            if expense.date == date {
+                sum = sum + expense.amount;
+            }
+        }
+        sum
+    }
+    fn summary_by_month(&self, month: u8) -> f64 {
+        let mut sum = 0 as f64;
+        for expense in self.expenses.iter() {
+            if expense.date.month() as u8 == month {
+                sum = sum + expense.amount;
+            }
+        }
+        sum
     }
 
     fn save_to_json(&self, filename: &str) -> io::Result<()> {
@@ -65,6 +92,19 @@ impl ExpenseTracker {
         let tracker: ExpenseTracker = serde_json::from_reader(file)?;
         Ok(tracker)
     }
+
+    fn print_all_expenses(&self) -> () {
+        for (i, expense) in self.expenses.iter().enumerate() {
+            println!(
+                "{}. Date: {}, Category: {}, Amount: ₹{}, Description: {}",
+                i + 1,
+                expense.date,
+                expense.category,
+                expense.amount,
+                expense.description,
+            );
+        }
+    }
 }
 
 fn main() {
@@ -72,29 +112,41 @@ fn main() {
         .version("1.0")
         .author("Arijit Gogoi <arijit@email.com>")
         .about("Keeps track of your expenses")
+        .subcommand_required(true)
+        .arg_required_else_help(true)
         .subcommand(
             Command::new("add")
                 .about("Add a new expense")
+                .short_flag('a')
+                .long_flag("add")
                 .visible_alias("a")
+                .arg_required_else_help(true)
                 .arg(
                     Arg::new("category")
                         .required(true)
+                        .short('c')
+                        .long("category")
                         .help("The category of the expense"),
                 )
                 .arg(
                     Arg::new("amount")
                         .required(true)
+                        .short('a')
+                        .long("amount")
                         .help("The expense amount.")
                         .value_parser(clap::value_parser!(f64)),
                 )
                 .arg(
                     Arg::new("description")
                         .required(true)
+                        .short('d')
+                        .long("description")
                         .help("A description for the expense"),
                 )
                 .arg(
                     Arg::new("date")
                         .required(false)
+                        .long("date")
                         .help("The date of expense")
                         .value_parser(clap::value_parser!(String)),
                 ),
@@ -102,8 +154,10 @@ fn main() {
         .subcommand(
             Command::new("delete")
                 .about("Delete an expense by id (row number)")
-                .visible_alias("del")
+                .short_flag('d')
+                .long_flag("delete")
                 .visible_alias("d")
+                .arg_required_else_help(true)
                 .arg(
                     Arg::new("row_number")
                         .required(true)
@@ -112,14 +166,43 @@ fn main() {
                 ),
         )
         .subcommand(
-            Command::new("list")
-                .about("List all expenses")
-                .visible_alias("l"),
+            Command::new("summary")
+                .about("View total expenses")
+                .short_flag('t')
+                .long_flag("total")
+                .visible_alias("t")
+                .arg_required_else_help(true)
+                .arg(
+                    Arg::new("category")
+                        .short('c')
+                        .long("category")
+                        .required(false)
+                        .help("Filter by category")
+                        .value_parser(clap::value_parser!(String)),
+                )
+                .arg(
+                    Arg::new("date")
+                        .short('d')
+                        .long("date")
+                        .required(false)
+                        .help("Filter by date")
+                        .value_parser(clap::value_parser!(String)),
+                )
+                .arg(
+                    Arg::new("month")
+                        .short('m')
+                        .long("month")
+                        .required(false)
+                        .help("Filter by month")
+                        .value_parser(clap::value_parser!(u8)),
+                ),
         )
         .subcommand(
-            Command::new("total")
-                .about("View total expenses")
-                .visible_alias("t"),
+            Command::new("list")
+                .about("List all expenses")
+                .short_flag('l')
+                .long_flag("list")
+                .visible_alias("l"),
         )
         .get_matches();
 
@@ -158,7 +241,8 @@ fn main() {
                 std::process::exit(1);
             }
 
-            println!("Expense added successfully!");
+            println!("Expense added successfully!\n");
+            tracker.print_all_expenses();
         }
         Some(("delete", sub_matches)) => {
             let row_number = sub_matches
@@ -177,24 +261,30 @@ fn main() {
                 std::process::exit(1);
             }
         }
+        Some(("summary", sub_matches)) => {
+            if let Some(category) = sub_matches.get_one::<String>("category") {
+                println!("Total expenses: ₹{:.2}", tracker.total_expenses(&category));
+            }
+
+            if let Some(date) = sub_matches.get_one::<String>("date") {
+                let date = NaiveDate::parse_from_str(date, "%Y-%m-%d")
+                    .expect("Should be correctly formatted: %Y-%m-%d (for example, 2025-12-31)");
+                println!("Expenses by date: ₹{:.2}", tracker.summary_by_date(date));
+            } else if let Some(month) = sub_matches.get_one::<u8>("month") {
+                println!(
+                    "Expenses by month: ₹{:.2}",
+                    tracker.summary_by_month(*month)
+                );
+            } else {
+                println!("Total expenses: ₹{:.2}", tracker.total_expenses(&"all"));
+            }
+        }
         Some(("list", _)) => {
             if tracker.expenses.is_empty() {
                 println!("No expenses found.");
             } else {
-                for (i, expense) in tracker.expenses.iter().enumerate() {
-                    println!(
-                        "{}. Date: {}, Category: {}, Amount: ₹{}, Description: {}",
-                        i + 1,
-                        expense.date,
-                        expense.category,
-                        expense.amount,
-                        expense.description,
-                    );
-                }
+                tracker.print_all_expenses();
             }
-        }
-        Some(("total", _)) => {
-            println!("Total expenses: ₹{:.2}", tracker.total_expenses());
         }
         _ => {
             eprintln!("Invalid command. Use 'add', 'list', 'delete', or 'total'.");
