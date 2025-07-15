@@ -111,12 +111,12 @@ fn main() {
     let matches = Command::new("Expense Tracker CLI")
         .version("1.0")
         .author("Arijit Gogoi <arijit@email.com>")
-        .about("Keeps track of your expenses")
+        .about("Keeps track of your expenses.")
         .subcommand_required(true)
         .arg_required_else_help(true)
         .subcommand(
             Command::new("add")
-                .about("Add a new expense")
+                .about("Add a new expense.")
                 .visible_alias("a")
                 .arg_required_else_help(true)
                 .arg(
@@ -124,7 +124,7 @@ fn main() {
                         .required(true)
                         .short('c')
                         .long("category")
-                        .help("The category of the expense")
+                        .help("The category of the expense.")
                         .value_parser(clap::value_parser!(String)),
                 )
                 .arg(
@@ -140,26 +140,26 @@ fn main() {
                         .required(true)
                         .short('d')
                         .long("description")
-                        .help("A description for the expense"),
+                        .help("A description for the expense."),
                 )
                 .arg(
                     Arg::new("when")
                         .required(false)
                         .short('w')
                         .long("when")
-                        .help("The date of expense")
+                        .help("The date of expense. (format: 2025-12-31)")
                         .value_parser(clap::value_parser!(String)),
                 ),
         )
         .subcommand(
             Command::new("delete")
-                .about("Delete an expense by id (row number)")
+                .about("Delete an expense by row number.")
                 .visible_alias("d")
                 .arg_required_else_help(true)
                 .arg(
                     Arg::new("row_number")
                         .required(true)
-                        .help("Delete an expense by id (row number)")
+                        .help("Delete an expense by row number.")
                         .value_parser(clap::value_parser!(usize)),
                 ),
         )
@@ -173,7 +173,7 @@ fn main() {
                         .short('c')
                         .long("category")
                         .required(false)
-                        .help("Filter by category")
+                        .help("Filter by category.")
                         .value_parser(clap::value_parser!(String)),
                 )
                 .arg(
@@ -181,7 +181,7 @@ fn main() {
                         .short('d')
                         .long("date")
                         .required(false)
-                        .help("Filter by exact date")
+                        .help("Filter by exact date.")
                         .value_parser(clap::value_parser!(String)),
                 )
                 .arg(
@@ -189,7 +189,7 @@ fn main() {
                         .short('m')
                         .long("month")
                         .required(false)
-                        .help("Filter by month")
+                        .help("Filter by month.")
                         .value_parser(clap::value_parser!(u8)),
                 )
                 .arg(
@@ -198,12 +198,12 @@ fn main() {
                         .short('a')
                         .long("all")
                         .required(false)
-                        .help("Total expenses"),
+                        .help("Total expenses."),
                 ),
         )
         .subcommand(
             Command::new("list")
-                .about("List all expenses")
+                .about("List all expenses.")
                 .visible_alias("l"),
         )
         .get_matches();
