@@ -44,11 +44,10 @@ impl ExpenseTracker {
     fn summary_all(&self) -> f64 {
         self.expenses.iter().map(|e| e.amount).sum()
     }
-    fn summary_by_category(&self, filter_by: &str) -> f64 {
+    fn summary_by_category(&self, category: &str) -> f64 {
         let mut sum = 0 as f64;
-
         for expense in self.expenses.iter() {
-            if expense.category == *filter_by {
+            if expense.category == *category {
                 sum = sum + expense.amount;
             }
         }
@@ -270,32 +269,29 @@ fn main() {
         Some(("summary", sub_matches)) => {
             if sub_matches.get_flag("all") {
                 println!("Total expenses: ₹{:.2}", tracker.summary_all());
-            }
-
-            match (
-                sub_matches.get_one::<String>("category"),
-                sub_matches.get_one::<String>("date"),
-                sub_matches.get_one::<u8>("month"),
-            ) {
-                (Some(category), _, _) => {
-                    println!(
-                        "Total expenses: ₹{:.2}",
-                        tracker.summary_by_category(&category)
-                    )
-                }
-                (_, Some(date), _) => {
-                    let date = NaiveDate::parse_from_str(date, "%Y-%m-%d").expect(
-                        "Should be correctly formatted: %Y-%m-%d (for example, 2025-12-31)",
-                    );
-                    println!("Expenses by date: ₹{:.2}", tracker.summary_by_date(date));
-                }
-                (_, _, Some(month)) => {
-                    println!("Expenses by month: ₹{:.2}", tracker.summary_by_month(month))
-                }
-                _ => {
-                    eprintln!(
-                        "Please provide a valid option for summary (e.g., --all, --category <name>, --date <YYYY-MM-DD>, --month <number>)."
-                    );
+            } else {
+                match (
+                    sub_matches.get_one::<String>("category"),
+                    sub_matches.get_one::<String>("date"),
+                    sub_matches.get_one::<u8>("month"),
+                ) {
+                    (Some(category), _, _) => {
+                        println!("Expenses: ₹{:.2}", tracker.summary_by_category(&category))
+                    }
+                    (_, Some(date), _) => {
+                        let date = NaiveDate::parse_from_str(date, "%Y-%m-%d").expect(
+                            "Should be correctly formatted: %Y-%m-%d (for example, 2025-12-31)",
+                        );
+                        println!("Expenses: ₹{:.2}", tracker.summary_by_date(date));
+                    }
+                    (_, _, Some(month)) => {
+                        println!("Expenses: ₹{:.2}", tracker.summary_by_month(month));
+                    }
+                    _ => {
+                        eprintln!(
+                            "Please provide a valid option for summary (e.g., --all, --category <name>, --date <YYYY-MM-DD>, --month <number>)."
+                        );
+                    }
                 }
             }
         }
